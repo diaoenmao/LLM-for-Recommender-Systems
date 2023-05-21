@@ -157,6 +157,8 @@ def process_control():
         if cfg['pl'] != 'none':
             pl_list = cfg['pl'].split('-')
             cfg['pl_mode'], cfg['pl_param'] = pl_list[0], float(pl_list[1])
+    if 'cs' in cfg['control']:
+        cfg['cs'] = float(cfg['control']['cs'])
     cfg['base'] = {}
     cfg['mf'] = {'hidden_size': 128}
     cfg['mlp'] = {'hidden_size': [128, 64, 32]}
@@ -176,27 +178,15 @@ def process_control():
     cfg[model_name]['shuffle'] = {'train': True, 'test': False}
     cfg[model_name]['optimizer_name'] = 'Adam'
     cfg[model_name]['lr'] = 1e-3
-    cfg[model_name]['betas'] = (0.9, 0.999)
+    cfg[model_name]['momentum'] = 0.9
     cfg[model_name]['weight_decay'] = 5e-4
-    cfg[model_name]['scheduler_name'] = 'None'
+    cfg[model_name]['nesterov'] = True
+    cfg[model_name]['betas'] = (0.9, 0.999)
+    cfg[model_name]['scheduler_name'] = 'CosineAnnealingLR'
+    cfg[model_name]['min_lr'] = 1e-5
     cfg[model_name]['batch_size'] = {'train': batch_size[cfg['data_mode']][cfg['data_name']],
                                      'test': batch_size[cfg['data_mode']][cfg['data_name']]}
     cfg[model_name]['num_epochs'] = 200 if model_name != 'base' else 1
-    cfg['local'] = {}
-    cfg['local']['shuffle'] = {'train': True, 'test': False}
-    cfg['local']['optimizer_name'] = 'Adam'
-    cfg['local']['lr'] = 1e-3
-    cfg['local']['betas'] = (0.9, 0.999)
-    cfg['local']['weight_decay'] = 5e-4
-    cfg['local']['scheduler_name'] = 'None'
-    cfg['local']['batch_size'] = {'train': batch_size[cfg['data_mode']][cfg['data_name']],
-                                  'test': batch_size[cfg['data_mode']][cfg['data_name']]}
-    cfg['local']['num_epochs'] = 20
-    cfg['global'] = {}
-    cfg['global']['num_epochs'] = 10
-    cfg['assist']['optimizer_name'] = 'LBFGS'
-    cfg['assist']['lr'] = 1
-    cfg['assist']['num_epochs'] = 10
     torch.set_num_threads(2)
     return
 
@@ -266,7 +256,8 @@ def make_scheduler(optimizer, tag):
     elif cfg[tag]['scheduler_name'] == 'ExponentialLR':
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
     elif cfg[tag]['scheduler_name'] == 'CosineAnnealingLR':
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg[tag]['num_epochs'], eta_min=0)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg[tag]['num_epochs'],
+                                                         eta_min=cfg[tag]['min_lr'])
     elif cfg[tag]['scheduler_name'] == 'ReduceLROnPlateau':
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=cfg[tag]['factor'],
                                                          patience=cfg[tag]['patience'], verbose=False,
@@ -297,5 +288,6 @@ def resume(model_tag, load_tag='checkpoint', verbose=True):
 
 def collate(input):
     for k in input:
-        input[k] = torch.cat(input[k], 0)
+        if isinstance(input[k], list):
+            input[k] = torch.cat(input[k], 0)
     return input

@@ -6,12 +6,6 @@ control:
   target_mode: implicit
   model_name: ae
   info: 0
-  data_split_mode: random-8
-  run_mode: assist
-  ar: constant-0.1
-  aw: constant
-  match_rate: 1
-  pl: none
 # experiment
 num_workers: 0
 init_seed: 0

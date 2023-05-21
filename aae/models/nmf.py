@@ -62,19 +62,40 @@ class NMF(nn.Module):
 
     def user_embedding_mlp(self, user):
         embedding = self.user_weight_mlp(user) + self.user_bias_mlp(user)
+        if hasattr(self, 'num_matched') and self.md_mode == 'user':
+            embedding[user < self.num_matched] = self.md_weight_mlp(user[user < self.num_matched]) + self.md_bias_mlp(
+                user[user < self.num_matched])
         return embedding
 
     def user_embedding_mf(self, user):
         embedding = self.user_weight_mf(user) + self.user_bias_mf(user)
+        if hasattr(self, 'num_matched') and self.md_mode == 'user':
+            embedding[user < self.num_matched] = self.md_weight_mf(user[user < self.num_matched]) + self.md_bias_mf(
+                user[user < self.num_matched])
         return embedding
 
     def item_embedding_mlp(self, item):
         embedding = self.item_weight_mlp(item) + self.item_bias_mlp(item)
+        if hasattr(self, 'num_matched') and self.md_mode == 'item':
+            embedding[item < self.num_matched] = self.md_weight_mlp(item[item < self.num_matched]) + self.md_bias_mlp(
+                item[item < self.num_matched])
         return embedding
 
     def item_embedding_mf(self, item):
         embedding = self.item_weight_mf(item) + self.item_bias_mf(item)
+        if hasattr(self, 'num_matched') and self.md_mode == 'item':
+            embedding[item < self.num_matched] = self.md_weight_mf(item[item < self.num_matched]) + self.md_bias_mf(
+                item[item < self.num_matched])
         return embedding
+
+    def make_md(self, num_matched, md_mode, weight_mlp, bias_mlp, weight_mf, bias_mf):
+        self.num_matched = num_matched
+        self.md_mode = md_mode
+        self.md_weight_mlp = weight_mlp
+        self.md_bias_mlp = bias_mlp
+        self.md_weight_mf = weight_mf
+        self.md_bias_mf = bias_mf
+        return
 
     def forward(self, input):
         output = {}

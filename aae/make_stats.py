@@ -1,5 +1,6 @@
 import argparse
 import os
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import datasets
@@ -29,6 +30,7 @@ if __name__ == "__main__":
                                          dataset['train'].user_profile}
             if hasattr(dataset['train'], 'item_attr'):
                 stats['item_attr'] = {k: dataset['train'].item_attr[k].shape[-1] for k in dataset['train'].item_attr}
+            stats['sparsity'] = len(dataset['train'].data.data) / (stats['m']['data'] * stats['n']['data'])
             cfg['control']['data_mode'] = 'user'
             cfg['control']['data_split_mode'] = 'genre'
             process_control()

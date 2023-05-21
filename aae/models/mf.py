@@ -35,11 +35,24 @@ class MF(nn.Module):
 
     def user_embedding(self, user):
         embedding = self.user_weight(user) + self.user_bias(user)
+        if hasattr(self, 'num_matched') and self.md_mode == 'user':
+            embedding[user < self.num_matched] = self.md_weight(user[user < self.num_matched]) + self.md_bias(
+                user[user < self.num_matched])
         return embedding
 
     def item_embedding(self, item):
         embedding = self.item_weight(item) + self.item_bias(item)
+        if hasattr(self, 'num_matched') and self.md_mode == 'item':
+            embedding[item < self.num_matched] = self.md_weight(item[item < self.num_matched]) + self.md_bias(
+                item[item < self.num_matched])
         return embedding
+
+    def make_md(self, num_matched, md_mode, weight, bias):
+        self.num_matched = num_matched
+        self.md_mode = md_mode
+        self.md_weight = weight
+        self.md_bias = bias
+        return
 
     def forward(self, input):
         output = {}
