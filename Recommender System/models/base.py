@@ -19,6 +19,7 @@ class Base(nn.Module):
             self.register_buffer('count', torch.zeros(self.num_users))
         else:
             raise ValueError('Not valid data mode')
+
     def forward(self, input):
         output = {}
         if cfg['data_mode'] == 'user':
@@ -60,8 +61,8 @@ class Base(nn.Module):
         return output
 
 
-def base(num_users=None, num_items=None):
-    num_users = cfg['num_users']['data'] if num_users is None else num_users
-    num_items = cfg['num_items']['data'] if num_items is None else num_items
+def base():
+    num_users = cfg['num_users']['data']
+    num_items = cfg['num_items']['data']
     model = Base(num_users, num_items)
     return model

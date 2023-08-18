@@ -22,10 +22,11 @@ def Accuracy(output, target):
     return acc
 
 
-def MAP(output, target, user, item, topk=10):
+def _setup_matrix(output, target, user, item):
     user, user_idx = torch.unique(user, return_inverse=True)
     item, item_idx = torch.unique(item, return_inverse=True)
     num_users, num_items = len(user), len(item)
+
     if cfg['data_mode'] == 'user':
         output_ = torch.full((num_users, num_items), -float('inf'), device=output.device)
         target_ = torch.full((num_users, num_items), 0., device=target.device)
@@ -38,15 +39,14 @@ def MAP(output, target, user, item, topk=10):
         target_[item_idx, user_idx] = target
     else:
         raise ValueError('Not valid data mode')
+
+    return output_, target_
+
+
+def _get_topk_targets(output_, target_, topk):
     topk = min(topk, target_.size(-1))
-    idx = torch.sort(output_, dim=-1, descending=True)[1]
-    topk_idx = idx[:, :topk]
-    topk_target = target_[torch.arange(target_.size(0), device=output.device).view(-1, 1), topk_idx]
-    precision = torch.cumsum(topk_target, dim=-1) / torch.arange(1, topk + 1, device=output.device).float()
-    m = torch.sum(topk_target, dim=-1)
-    ap = (precision * topk_target).sum(dim=-1) / (m + 1e-10)
-    map = ap.mean().item()
-    return map
+    _, indices = output_.topk(topk, dim=-1)
+    return target_.take_along_dim(indices, dim=-1)
 
 
 def div_no_nan(a, b, na_value=0.):
@@ -55,54 +55,53 @@ def div_no_nan(a, b, na_value=0.):
 
 def DCG(target):
     batch_size, k = target.shape
-    rank_positions = torch.arange(1, k + 1, dtype=torch.float32, device=target.device).tile((batch_size, 1))
-    dcg = (target / torch.log2(rank_positions + 1)).sum(dim=-1)
-    return dcg
+    rank_positions = torch.arange(1, k + 1, dtype=torch.float32, device=target.device).expand(batch_size, -1)
+    return (target / torch.log2(rank_positions + 1)).sum(dim=-1)
 
 
-def NDCG(output, target, user, item, topk=10):
-    user, user_idx = torch.unique(user, return_inverse=True)
-    item, item_idx = torch.unique(item, return_inverse=True)
-    num_users, num_items = len(user), len(item)
-    if cfg['data_mode'] == 'user':
-        output_ = torch.full((num_users, num_items), -float('inf'), device=output.device)
-        target_ = torch.full((num_users, num_items), 0., device=target.device)
-        output_[user_idx, item_idx] = output
-        target_[user_idx, item_idx] = target
-    elif cfg['data_mode'] == 'item':
-        output_ = torch.full((num_items, num_users), -float('inf'), device=output.device)
-        target_ = torch.full((num_items, num_users), 0., device=target.device)
-        output_[item_idx, user_idx] = output
-        target_[item_idx, user_idx] = target
-    else:
-        raise ValueError('Not valid data mode')
-    topk_ = min(topk, output_.size(-1))
-    _, output_topk_idx = output_.topk(topk_, dim=-1)
-    sorted_target = target_.take_along_dim(output_topk_idx, dim=-1)
-    ideal_target, _ = target_.topk(topk_, dim=-1)
+def MAP(output, target, user, item, topk=10):
+    output_, target_ = _setup_matrix(output, target, user, item)
+    topk_target = _get_topk_targets(output_, target_, topk)
+    precision = torch.cumsum(topk_target, dim=-1) / torch.arange(1, topk + 1, device=output.device).float()
+    m = torch.sum(topk_target, dim=-1)
+    ap = (precision * topk_target).sum(dim=-1) / (m + 1e-10)
+    return ap.mean().item()
+
+
+def Precision(output, target, user, item, topk=10):
+    output_, target_ = _setup_matrix(output, target, user, item)
+    topk_target = _get_topk_targets(output_, target_, topk)
+    relevant_retrieved_items = torch.sum(topk_target, dim=-1)
+    return (relevant_retrieved_items / topk).mean().item()
+
+
+def Recall(output, target, user, item, topk=10):
+    output_, target_ = _setup_matrix(output, target, user, item)
+    topk_target = _get_topk_targets(output_, target_, topk)
+    relevant_items = torch.sum(target_, dim=-1)
+    relevant_retrieved_items = torch.sum(topk_target, dim=-1)
+    return (relevant_retrieved_items / (relevant_items + 1e-10)).mean().item()
+
+
+def F1(output, target, user, item, topk=10):
+    precision = Precision(output, target, user, item, topk)
+    recall = Recall(output, target, user, item, topk)
+    if precision + recall == 0:
+        return 0.0
+    return 2 * (precision * recall) / (precision + recall)
+
+
+def NDCG(output, target, user, item, topk=20):
+    output_, target_ = _setup_matrix(output, target, user, item)
+    sorted_target = _get_topk_targets(output_, target_, topk)
+    ideal_target, _ = target_.topk(topk, dim=-1)
     ndcg = div_no_nan(DCG(sorted_target), DCG(ideal_target)).mean().item()
     return ndcg
 
 
 def HR(output, target, user, item, topk=10):
-    user, user_idx = torch.unique(user, return_inverse=True)
-    item, item_idx = torch.unique(item, return_inverse=True)
-    num_users, num_items = len(user), len(item)
-    if cfg['data_mode'] == 'user':
-        output_ = torch.full((num_users, num_items), -float('inf'), device=output.device)
-        target_ = torch.full((num_users, num_items), 0., device=target.device)
-        output_[user_idx, item_idx] = output
-        target_[user_idx, item_idx] = target
-    elif cfg['data_mode'] == 'item':
-        output_ = torch.full((num_items, num_users), -float('inf'), device=output.device)
-        target_ = torch.full((num_items, num_users), 0., device=target.device)
-        output_[item_idx, user_idx] = output
-        target_[item_idx, user_idx] = target
-    else:
-        raise ValueError('Not valid data mode')
-    topk_ = min(topk, output_.size(-1))
-    _, output_topk_idx = output_.topk(topk_, dim=-1)
-    sorted_target = target_.take_along_dim(output_topk_idx, dim=-1)
+    output_, target_ = _setup_matrix(output, target, user, item)
+    sorted_target = _get_topk_targets(output_, target_, topk)
     hr = (sorted_target.float().sum(dim=-1) > 0).float().mean().item()
     return hr
 
@@ -114,8 +113,14 @@ class Metric(object):
         self.metric = {'Loss': (lambda input, output: output['loss'].item()),
                        'RMSE': (lambda input, output: RMSE(output['target_rating'], input['target_rating'])),
                        'Accuracy': (lambda input, output: Accuracy(output['target_rating'], input['target_rating'])),
+                       'Recall': (lambda input, output: Recall(output['target_rating'], input['target_rating'],
+                                                               input['target_user'], input['target_item'])),
+                       'Precision': (lambda input, output: Precision(output['target_rating'], input['target_rating'],
+                                                                     input['target_user'], input['target_item'])),
                        'MAP': (lambda input, output: MAP(output['target_rating'], input['target_rating'],
                                                          input['target_user'], input['target_item'])),
+                       'F1': (lambda input, output: F1(output['target_rating'], input['target_rating'],
+                                                       input['target_user'], input['target_item'])),
                        'HR': (lambda input, output: HR(output['target_rating'], input['target_rating'],
                                                        input['target_user'], input['target_item'])),
                        'NDCG': (lambda input, output: NDCG(output['target_rating'], input['target_rating'],

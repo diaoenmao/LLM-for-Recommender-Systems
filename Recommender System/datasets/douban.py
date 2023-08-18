@@ -10,53 +10,10 @@ from scipy.sparse import csr_matrix
 from config import cfg
 
 
-class Amazon(Dataset):
-    data_name = 'Amazon'
-    # file = [('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/AMAZON_FASHION.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/All_Beauty.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Appliances.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Arts_Crafts_and_Sewing.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Automotive.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Books.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/CDs_and_Vinyl.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Cell_Phones_and_Accessories.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Clothing_Shoes_and_Jewelry.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Digital_Music.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Electronics.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Gift_Cards.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Grocery_and_Gourmet_Food.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Home_and_Kitchen.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Industrial_and_Scientific.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Kindle_Store.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Luxury_Beauty.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Magazine_Subscriptions.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Movies_and_TV.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Musical_Instruments.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Office_Products.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Patio_Lawn_and_Garden.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Pet_Supplies.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Prime_Pantry.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Software.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Sports_and_Outdoors.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Tools_and_Home_Improvement.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Toys_and_Games.csv', None),
-    #         ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Video_Games.csv', None),
-    #         ]
-    file = [('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Books.csv', None),
-            ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Digital_Music.csv', None),
-            ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Movies_and_TV.csv', None),
-            ('http://deepyeti.ucsd.edu/jianmo/amazon/categoryFilesSmall/Video_Games.csv', None),
-            ]
-    # genre = ['AMAZON_FASHION', 'All_Beauty', 'Appliances', 'Arts_Crafts_and_Sewing', 'Automotive', 'Books',
-    #          'CDs_and_Vinyl', 'Cell_Phones_and_Accessories', 'Clothing_Shoes_and_Jewelry', 'Digital_Music',
-    #          'Electronics', 'Gift_Cards', 'Grocery_and_Gourmet_Food', 'Home_and_Kitchen',
-    #          'Industrial_and_Scientific', 'Kindle_Store', 'Luxury_Beauty', 'Magazine_Subscriptions',
-    #          'Movies_and_TV', 'Musical_Instruments', 'Office_Products', 'Patio_Lawn_and_Garden', 'Pet_Supplies',
-    #          'Prime_Pantry', 'Software', 'Sports_and_Outdoors', 'Tools_and_Home_Improvement', 'Toys_and_Games',
-    #          'Video_Games']
-    genre = ['Books', 'Digital_Music', 'Movies_and_TV', 'Video_Games']
-
-    # genre = ['AMAZON_FASHION', 'All_Beauty', 'Luxury_Beauty', 'Magazine_Subscriptions']
+class Douban(Dataset):
+    data_name = 'Douban'
+    filename = 'archive.zip'  # https://www.kaggle.com/datasets/fengzhujoey/douban-datasetratingreviewside-information
+    genre = ['book', 'movie', 'music']
 
     def __init__(self, root, split, data_mode, target_mode, transform=None):
         self.root = os.path.expanduser(root)
@@ -79,6 +36,8 @@ class Amazon(Dataset):
                                      shape=(self.target.shape[1], self.target.shape[0]))
         else:
             raise ValueError('Not valid data mode')
+        user_profile = load(os.path.join(self.processed_folder, 'user_profile.pt'), mode='pickle')
+        self.user_profile = {'data': user_profile, 'target': user_profile}
         item_attr = load(os.path.join(self.processed_folder, 'item_attr.pt'), mode='pickle')
         self.item_attr = {'data': item_attr, 'target': item_attr}
 
@@ -92,6 +51,10 @@ class Amazon(Dataset):
                      'target_user': torch.tensor(np.array([index]), dtype=torch.long),
                      'target_item': torch.tensor(target.col, dtype=torch.long),
                      'target_rating': torch.tensor(target.data)}
+            if 'data' in self.user_profile:
+                input['user_profile'] = torch.tensor(self.user_profile['data'][index])
+            if 'target' in self.user_profile:
+                input['target_user_profile'] = torch.tensor(self.user_profile['target'][index])
             if 'data' in self.item_attr:
                 input['item_attr'] = torch.tensor(self.item_attr['data'][data.col])
             if 'target' in self.item_attr:
@@ -103,6 +66,10 @@ class Amazon(Dataset):
                      'target_user': torch.tensor(target.col, dtype=torch.long),
                      'target_item': torch.tensor(np.array([index]), dtype=torch.long),
                      'target_rating': torch.tensor(target.data)}
+            if 'data' in self.user_profile:
+                input['user_profile'] = torch.tensor(self.user_profile['data'][data.col])
+            if 'target' in self.user_profile:
+                input['target_user_profile'] = torch.tensor(self.user_profile['target'][target.col])
             if 'data' in self.item_attr:
                 input['item_attr'] = torch.tensor(self.item_attr['data'][index])
             if 'target' in self.item_attr:
@@ -153,21 +120,20 @@ class Amazon(Dataset):
     def process(self):
         if not check_exists(self.raw_folder):
             self.download()
+        extract_file(os.path.join(self.raw_folder, self.filename))
         train_set, test_set = self.make_explicit_data()
         save(train_set, os.path.join(self.processed_folder, 'explicit', 'train.pt'), mode='pickle')
         save(test_set, os.path.join(self.processed_folder, 'explicit', 'test.pt'), mode='pickle')
         train_set, test_set = self.make_implicit_data()
         save(train_set, os.path.join(self.processed_folder, 'implicit', 'train.pt'), mode='pickle')
         save(test_set, os.path.join(self.processed_folder, 'implicit', 'test.pt'), mode='pickle')
-        item_attr = self.make_info()
+        user_profile, item_attr = self.make_info()
+        save(user_profile, os.path.join(self.processed_folder, 'user_profile.pt'), mode='pickle')
         save(item_attr, os.path.join(self.processed_folder, 'item_attr.pt'), mode='pickle')
         return
 
     def download(self):
         makedir_exist_ok(self.raw_folder)
-        for (url, md5) in self.file:
-            filename = os.path.basename(url)
-            download_url(url, os.path.join(self.raw_folder, filename), md5)
         return
 
     def __repr__(self):
@@ -180,9 +146,10 @@ class Amazon(Dataset):
         item = []
         rating = []
         for i in range(len(self.genre)):
-            data_i = pd.read_csv(os.path.join(self.raw_folder, '{}.csv'.format(self.genre[i])), header=None)
-            user_i = data_i.iloc[:, 1].to_numpy()
-            item_i = data_i.iloc[:, 0].to_numpy()
+            data_i = pd.read_csv(os.path.join(self.raw_folder, 'douban_dataset(text information)',
+                                              '{}reviews_cleaned.txt'.format(self.genre[i])), delimiter='\t')
+            user_i = data_i.iloc[:, 0].to_numpy()
+            item_i = data_i.iloc[:, 1].to_numpy()
             item_id_i, item_inv_i = np.unique(item_i, return_inverse=True)
             item_id_map_i = {item_id_i[i]: i for i in range(len(item_id_i))}
             item_i = np.array([item_id_map_i[i] for i in item_id_i], dtype=np.int64)[item_inv_i].reshape(item_i.shape)
@@ -192,23 +159,9 @@ class Amazon(Dataset):
                 item_i = item_i + len(item[i - 1])
             item.append(item_i)
             rating.append(rating_i)
-
-        matched_user_id = []
-        for i in range(len(self.genre)):
-            for j in range(i + 1, len(self.genre)):
-                matched_userid_i_j = set(user[i].tolist()).intersection(set(user[j].tolist()))
-                matched_user_id.append(matched_userid_i_j)
-        matched_user_id = np.array(list(set.intersection(*matched_user_id)))
         user = np.concatenate(user, axis=0)
         item = np.concatenate(item, axis=0)
         rating = np.concatenate(rating, axis=0)
-
-        user_id, user_inv = np.unique(user, return_inverse=True)
-        _, _, unique_matched_user_inv = np.intersect1d(matched_user_id, user_id, return_indices=True)
-        mask = np.isin(user_inv, unique_matched_user_inv)
-        user = user[mask]
-        item = item[mask]
-        rating = rating[mask]
 
         user_id, user_inv = np.unique(user, return_inverse=True)
         item_id, item_inv = np.unique(item, return_inverse=True)
@@ -216,7 +169,7 @@ class Amazon(Dataset):
         user_id_map = {user_id[i]: i for i in range(len(user_id))}
         item_id_map = {item_id[i]: i for i in range(len(item_id))}
         user = np.array([user_id_map[i] for i in user_id], dtype=np.int64)[user_inv].reshape(user.shape)
-        item = np.array([item_id_map[i] for i in item_id], dtype=np.int64)[item_inv].reshape(user.shape)
+        item = np.array([item_id_map[i] for i in item_id], dtype=np.int64)[item_inv].reshape(item.shape)
 
         data = csr_matrix((rating, (user, item)), shape=(M, N))
         nonzero_user, nonzero_item = data.nonzero()
@@ -230,6 +183,15 @@ class Amazon(Dataset):
         user = user[dense_mask]
         item = item[dense_mask]
         rating = rating[dense_mask]
+
+        # Create a DataFrame with the user, item, and rating data
+        data_df = pd.DataFrame({'user': user, 'item': item, 'rating': rating})
+        # Group by user and item and compute the mean rating for each group
+        averaged_data = data_df.groupby(['user', 'item'], as_index=False).mean()
+        # Extract the averaged user, item, and rating arrays
+        user = averaged_data['user'].to_numpy()
+        item = averaged_data['item'].to_numpy()
+        rating = averaged_data['rating'].to_numpy()
 
         user_id, user_inv = np.unique(user, return_inverse=True)
         item_id, item_inv = np.unique(item, return_inverse=True)
@@ -255,9 +217,10 @@ class Amazon(Dataset):
         item = []
         rating = []
         for i in range(len(self.genre)):
-            data_i = pd.read_csv(os.path.join(self.raw_folder, '{}.csv'.format(self.genre[i])), header=None)
-            user_i = data_i.iloc[:, 1].to_numpy()
-            item_i = data_i.iloc[:, 0].to_numpy()
+            data_i = pd.read_csv(os.path.join(self.raw_folder, 'douban_dataset(text information)',
+                                              '{}reviews_cleaned.txt'.format(self.genre[i])), delimiter='\t')
+            user_i = data_i.iloc[:, 0].to_numpy()
+            item_i = data_i.iloc[:, 1].to_numpy()
             item_id_i, item_inv_i = np.unique(item_i, return_inverse=True)
             item_id_map_i = {item_id_i[i]: i for i in range(len(item_id_i))}
             item_i = np.array([item_id_map_i[i] for i in item_id_i], dtype=np.int64)[item_inv_i].reshape(item_i.shape)
@@ -267,24 +230,9 @@ class Amazon(Dataset):
                 item_i = item_i + len(item[i - 1])
             item.append(item_i)
             rating.append(rating_i)
-
-        matched_user_id = []
-        for i in range(len(self.genre)):
-            for j in range(i + 1, len(self.genre)):
-                matched_userid_i_j = set(user[i].tolist()).intersection(set(user[j].tolist()))
-                matched_user_id.append(matched_userid_i_j)
-        matched_user_id = np.array(list(set.intersection(*matched_user_id)))
-
         user = np.concatenate(user, axis=0)
         item = np.concatenate(item, axis=0)
         rating = np.concatenate(rating, axis=0)
-
-        user_id, user_inv = np.unique(user, return_inverse=True)
-        _, _, unique_matched_user_inv = np.intersect1d(matched_user_id, user_id, return_indices=True)
-        mask = np.isin(user_inv, unique_matched_user_inv)
-        user = user[mask]
-        item = item[mask]
-        rating = rating[mask]
 
         user_id, user_inv = np.unique(user, return_inverse=True)
         item_id, item_inv = np.unique(item, return_inverse=True)
@@ -306,6 +254,15 @@ class Amazon(Dataset):
         user = user[dense_mask]
         item = item[dense_mask]
         rating = rating[dense_mask]
+
+        # Create a DataFrame with the user, item, and rating data
+        data_df = pd.DataFrame({'user': user, 'item': item, 'rating': rating})
+        # Group by user and item and compute the mean rating for each group
+        averaged_data = data_df.groupby(['user', 'item'], as_index=False).mean()
+        # Extract the averaged user, item, and rating arrays
+        user = averaged_data['user'].to_numpy()
+        item = averaged_data['item'].to_numpy()
+        rating = averaged_data['rating'].to_numpy()
 
         user_id, user_inv = np.unique(user, return_inverse=True)
         item_id, item_inv = np.unique(item, return_inverse=True)
@@ -331,13 +288,19 @@ class Amazon(Dataset):
         return (train_data, train_target), (test_data, test_target)
 
     def make_info(self):
+        user_info = pd.read_csv(os.path.join(self.raw_folder, 'douban_dataset(text information)', 'users_cleaned.txt'),
+                                delimiter='\t')
+        user_id_info = user_info.iloc[:, -1].to_numpy()
+        living_place = user_info.iloc[:, 1].to_numpy()
+
         user = []
         item = []
         rating = []
         for i in range(len(self.genre)):
-            data_i = pd.read_csv(os.path.join(self.raw_folder, '{}.csv'.format(self.genre[i])), header=None)
-            user_i = data_i.iloc[:, 1].to_numpy()
-            item_i = data_i.iloc[:, 0].to_numpy()
+            data_i = pd.read_csv(os.path.join(self.raw_folder, 'douban_dataset(text information)',
+                                              '{}reviews_cleaned.txt'.format(self.genre[i])), delimiter='\t')
+            user_i = data_i.iloc[:, 0].to_numpy()
+            item_i = data_i.iloc[:, 1].to_numpy()
             item_id_i, item_inv_i = np.unique(item_i, return_inverse=True)
             item_id_map_i = {item_id_i[i]: i for i in range(len(item_id_i))}
             item_i = np.array([item_id_map_i[i] for i in item_id_i], dtype=np.int64)[item_inv_i].reshape(item_i.shape)
@@ -347,33 +310,10 @@ class Amazon(Dataset):
                 item_i = item_i + len(item[i - 1])
             item.append(item_i)
             rating.append(rating_i)
-
-        matched_user_id = []
-        for i in range(len(self.genre)):
-            for j in range(i + 1, len(self.genre)):
-                matched_userid_i_j = set(user[i].tolist()).intersection(set(user[j].tolist()))
-                matched_user_id.append(matched_userid_i_j)
-        matched_user_id = np.array(list(set.intersection(*matched_user_id)))
-
         num_items_genre = [len(x) for x in item]
         user = np.concatenate(user, axis=0)
         item = np.concatenate(item, axis=0)
         rating = np.concatenate(rating, axis=0)
-
-        user_id, user_inv = np.unique(user, return_inverse=True)
-        _, _, unique_matched_user_inv = np.intersect1d(matched_user_id, user_id, return_indices=True)
-        mask = np.in1d(user_inv, unique_matched_user_inv)
-        user = user[mask]
-        item = item[mask]
-        rating = rating[mask]
-
-        num_items_genre_ = []
-        pivot = 0
-        for i in range(len(num_items_genre)):
-            num_items_i = int(mask[pivot:pivot + num_items_genre[i]].astype(np.float32).sum())
-            pivot = pivot + num_items_genre[i]
-            num_items_genre_.append(num_items_i)
-        num_items_genre = num_items_genre_
 
         user_id, user_inv = np.unique(user, return_inverse=True)
         item_id, item_inv = np.unique(item, return_inverse=True)
@@ -382,6 +322,11 @@ class Amazon(Dataset):
         item_id_map = {item_id[i]: i for i in range(len(item_id))}
         user = np.array([user_id_map[i] for i in user_id], dtype=np.int64)[user_inv].reshape(user.shape)
         item = np.array([item_id_map[i] for i in item_id], dtype=np.int64)[item_inv].reshape(item.shape)
+
+        user_id_info_idx = np.intersect1d(user_id_info, user_id, return_indices=True)[1]
+        user_id_info = user_id_info[user_id_info_idx]
+        living_place = living_place[user_id_info_idx]
+        user_id_info = np.array([user_id_map[i] for i in user_id_info])
 
         data = csr_matrix((rating, (user, item)), shape=(M, N))
         nonzero_user, nonzero_item = data.nonzero()
@@ -403,6 +348,33 @@ class Amazon(Dataset):
         user = np.array([user_id_map[i] for i in user_id], dtype=np.int64)[user_inv].reshape(user.shape)
         item = np.array([item_id_map[i] for i in item_id], dtype=np.int64)[item_inv].reshape(item.shape)
 
+        user_id_info_idx = np.intersect1d(user_id_info, user_id, return_indices=True)[1]
+        living_place = living_place[user_id_info_idx]
+
+        provinces = ['北京', '天津', '河北', '山西', '内蒙古', '辽宁', '吉林', '黑龙江', '上海', '江苏', '浙江', '安徽',
+                     '福建', '江西', '山东', '河南', '湖北', '湖南', '广东', '广西', '海南', '重庆', '四川', '贵州', '云南',
+                     '西藏', '陕西', '甘肃', '青海', '宁夏', '新疆', '台湾', '香港', '澳门']
+        code_idx = -1
+        visited_provinces = {}
+        for i in range(len(living_place)):
+            check_in = [p in str(living_place[i]) for p in provinces]
+            if any(check_in):
+                visiting_p = provinces[np.where(check_in)[0].item()]
+                if visiting_p not in visited_provinces:
+                    code_idx += 1
+                    visited_provinces[visiting_p] = code_idx
+                code_idx_i = visited_provinces[visiting_p]
+                living_place[i] = code_idx_i
+            else:
+                living_place[i] = -1
+        living_place = np.array(living_place)
+        living_place[living_place == -1] = code_idx + 1
+        living_place_id, living_place_inv = np.unique(living_place, return_inverse=True)
+        user_profile = np.zeros((len(user_id), len(living_place_id)), dtype=np.float32)
+        for i in range(len(living_place_id)):
+            mask_i = living_place == living_place_id[i]
+            user_profile[mask_i, i] += 1
+
         num_items_genre_ = []
         pivot = 0
         for i in range(len(num_items_genre)):
@@ -417,4 +389,4 @@ class Amazon(Dataset):
             item_inv_i = np.intersect1d(item_id, item[pivot:pivot + num_items_genre[i]], return_indices=True)[1]
             item_attr[item_inv_i, i] += 1
             pivot = pivot + num_items_genre[i]
-        return item_attr
+        return user_profile, item_attr

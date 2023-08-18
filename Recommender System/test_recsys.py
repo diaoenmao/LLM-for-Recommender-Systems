@@ -63,7 +63,7 @@ def test(data_loader, model, metric, logger, epoch):
     with torch.no_grad():
         for i, input in enumerate(data_loader):
             input = collate(input)
-            input_size = len(input['target_{}'.format(cfg['data_mode'])])
+            input_size = len(input['target_rating'])
             if input_size == 0:
                 continue
             input = to_device(input, cfg['device'])
